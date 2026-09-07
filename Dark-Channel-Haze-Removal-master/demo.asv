@@ -1,0 +1,35 @@
+warning('off','all');
+
+tic;
+image = double(imread('4.jpg'))/255;
+
+image = imresize(image, 0.5);
+
+result = dehaze(image, 0.95, 15);
+toc;
+
+figure;imshow(image);title("Image");
+figure, imshow(result);title('Dehazed image');
+detail = image - result;
+figure;imshow(detail);title("Detail");
+base = result-detail;
+figure; imshow(base);title("Base");
+iters = 5;   % recommended 20–40
+dt    = 0.03; % timestep (0.1-0.2 recommended)
+enhanced_baselayer = mean_curvature_filter(base, iters, dt)
+figure;imshow(enhanced_baselayer);title("MCF-Base");
+detail_layer_clamped = min(max(detail, 0), 1);   % keep values valid
+detail_enhance = zeros(size(detail_layer_clamped));
+
+for c = 1:3
+    detail_enhance(:,:,c) = PMD_explicit(detail_layer_clamped(:,:,c), ...
+                                         5, 1/5, 15, 1, 1);
+end
+figure;imshow(detail_enhance);title("Detail enhenace");
+F_rgb = enhanced_baselayer+0.5*detail_enhance;
+imshow(F_rgb);title("Final iamge");
+
+PSNR = psnr(F_rgb, image);
+disp(['PSNR: ', num2str(PSNR)]);
+
+warning('on','all');
